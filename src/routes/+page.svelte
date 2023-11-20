@@ -6,5 +6,5 @@
         await init();
     });
 </script>
-<h1>Hello World!</h1>
+<canvas id="canvas"></canvas>
 
