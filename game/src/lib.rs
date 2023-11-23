@@ -1,8 +1,8 @@
 use anyhow::Result;
-use engine::{GameLoop};
+use engine::GameLoop;
 use game::TappyPlane;
 use wasm_bindgen::prelude::*;
-use web_sys::{console, HtmlImageElement};
+use web_sys::console;
 
 #[macro_use]
 mod browser;

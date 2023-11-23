@@ -1,10 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
-
     import init from "game";
 
     onMount(async () => {
-            console.log("Game Init");
             await init();
     });
 </script>

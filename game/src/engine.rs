@@ -1,4 +1,4 @@
-use std::{rc::Rc, cell::RefCell, sync::Mutex};
+use std::{rc::Rc, cell::RefCell, sync::Mutex, collections::HashMap};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -21,17 +21,10 @@ pub struct Rect {
     pub height: u16,
 }
 
-
 #[derive(Debug, Deserialize)]
-pub struct Tile {
-    pub name: String,
-    pub rect: Rect,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Sheet {
+pub struct Spritesheet {
     pub image: String,
-    pub tileset: Vec<Tile>,
+    pub tileset: HashMap<String, Rect>,
 }
 
 pub struct Renderer {
