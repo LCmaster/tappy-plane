@@ -49,12 +49,7 @@ impl Game for TappyPlane {
             renderer.clear(&clear_area);
 
             self.image.as_ref().map(|image| {
-                renderer.draw_image(
-                    &image, 
-                    background, 
-                    &Rect{x:0, y:0, width:640, height:480}
-                );
-
+                renderer.draw_image(&image, background, &clear_area);
                 renderer.draw_image(
                     &image,
                     plane_tile,

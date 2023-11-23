@@ -1,4 +1,3 @@
 .env
-/pkg
 /target
 Cargo.lock
