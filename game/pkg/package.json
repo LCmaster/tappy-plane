@@ -1,0 +1,1 @@
+{"name":"game","version":"0.1.0","files":["game_bg.wasm","game.js","game.d.ts"],"module":"game.js","types":"game.d.ts","sideEffects":["./snippets/*"],"type":"module"}
