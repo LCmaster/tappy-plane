@@ -1,10 +1,13 @@
 <script lang="ts">
-    import init from "game";
     import { onMount } from "svelte";
 
+    import init from "game";
+
     onMount(async () => {
-        await init();
+            console.log("Game Init");
+            await init();
     });
 </script>
-<canvas id="canvas"></canvas>
+
+<canvas id="canvas" width="640" height="480"></canvas>
 

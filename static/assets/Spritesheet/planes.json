@@ -1,0 +1,17 @@
+{
+	"image": "/assets/Spritesheet/planes.png",
+	"tileset": [
+		{"name": "bluePlane1",      "rect": {"x": 0, 	"y": 73, 	"width": 88, 	"height": 73}},
+		{"name": "bluePlane2",      "rect": {"x": 0, 	"y": 0,     "width": 88, 	"height": 73}},
+		{"name": "bluePlane3",      "rect": {"x": 0, 	"y": 365, 	"width": 88, 	"height": 73}},
+		{"name": "greenPlane1",     "rect": {"x": 88, 	"y": 219, 	"width": 88, 	"height": 73}},
+		{"name": "greenPlane2",     "rect": {"x": 88, 	"y": 146, 	"width": 88, 	"height": 73}},
+		{"name": "greenPlane3",     "rect": {"x": 88, 	"y": 73, 	"width": 88, 	"height": 73}},
+		{"name": "redPlane1",       "rect": {"x": 88, 	"y": 0, 	"width": 88, 	"height": 73}},
+		{"name": "redPlane2",       "rect": {"x": 0, 	"y": 438, 	"width": 88, 	"height": 73}},
+		{"name": "redPlane3",       "rect": {"x": 88, 	"y": 292, 	"width": 88, 	"height": 73}},
+		{"name": "yellowPlane1",    "rect": {"x": 0, 	"y": 292, 	"width": 88, 	"height": 73}},
+		{"name": "yellowPlane2",    "rect": {"x": 0, 	"y": 219, 	"width": 88, 	"height": 73}},
+		{"name": "yellowPlane3",    "rect": {"x": 0, 	"y": 146, 	"width": 88, 	"height": 73}}
+	]
+}
