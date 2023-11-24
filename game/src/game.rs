@@ -165,18 +165,18 @@ impl Game for TappyPlane {
             None => ()
         };
 
-        self.frame = if self.frame < (12-1) { self.frame + 1 } else { 0 }; 
+        self.frame = if self.frame < std::u32::MAX { self.frame + 1 } else { 0 }; 
     }
 
     fn draw(&self, renderer: &Renderer) {
 
-        let frame = self.frame;
+        let plane_number = (self.frame % 12) / 4 + 1;
         if let Some(sheet) = self.sheet.as_ref() {
             let background: &Rect = sheet.tileset.get("background.png").as_ref().unwrap();
             let floor: &Rect = sheet.tileset.get("groundGrass.png").as_ref().unwrap();
             let ceilling: &Rect = sheet.tileset.get("groundDirt.png").as_ref().unwrap();
             let obstacle: &Rect = sheet.tileset.get("rock.png").as_ref().unwrap();
-            let plane_tile: &Rect = sheet.tileset.get(format!("planeRed{}.png", frame/4 + 1 ).as_str()).as_ref().unwrap();
+            let plane_tile: &Rect = sheet.tileset.get(format!("planeRed{}.png", plane_number ).as_str()).as_ref().unwrap();
 
             let clear_area = Rect{
                 x: 0,
@@ -187,29 +187,51 @@ impl Game for TappyPlane {
 
             renderer.clear(&clear_area);
 
+            let floor_offset = self.frame as i32 % floor.width;
+            
             self.image.as_ref().map(|image| {
                 renderer.draw_image(&image, background, &clear_area);
                 renderer.draw_image(
                     &image, 
                     floor, 
                     &Rect{
-                        x: 0, 
+                        x: 0 - floor_offset as i32, 
                         y: 480-floor.height,
                         width: floor.width,
                         height: floor.height
                     }
                 );
-                
+                renderer.draw_image(
+                    &image, 
+                    floor, 
+                    &Rect{
+                        x: 0 - floor_offset as i32 + floor.width, 
+                        y: 480-floor.height,
+                        width: floor.width,
+                        height: floor.height
+                    }
+                );
+
                 renderer.context.save();
-                renderer.context.translate(ceilling.width as f64, 0.0);
+                renderer.context.translate(ceilling.width as f64, ceilling.height as f64);
                 renderer.context.rotate(std::f64::consts::PI);
 
                 renderer.draw_image(
                     &image,
                     ceilling, 
                     &Rect{
-                        x: 0,
-                        y: -ceilling.height,
+                        x: 0 + floor_offset as i32, 
+                        y: 0,
+                        width: ceilling.width,
+                        height: ceilling.height,
+                    }
+                );
+                renderer.draw_image(
+                    &image,
+                    ceilling, 
+                    &Rect{
+                        x: 0 + floor_offset as i32 - ceilling.width as i32, 
+                        y: 0,
                         width: ceilling.width,
                         height: ceilling.height,
                     }
