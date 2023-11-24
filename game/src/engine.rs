@@ -1,10 +1,10 @@
-use std::{rc::Rc, cell::RefCell, sync::Mutex, collections::HashMap};
+use std::{rc::Rc, cell::{RefCell, Cell}, sync::Mutex, collections::HashMap, io::BufRead};
 
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, HtmlImageElement};
+use web_sys::{CanvasRenderingContext2d, HtmlImageElement, MouseEvent};
 use futures;
 
 use crate::browser;
@@ -15,10 +15,10 @@ pub const FRAME_RATE_IN_MILLISECONDS: f64 = FRAME_RATE * 1000.0;
 
 #[derive(Debug, Deserialize)]
 pub struct Rect {
-    pub x: u16,
-    pub y: u16,
-    pub width: u16,
-    pub height: u16,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -28,7 +28,7 @@ pub struct Spritesheet {
 }
 
 pub struct Renderer {
-    context: CanvasRenderingContext2d,
+    pub context: CanvasRenderingContext2d,
 }
 
 impl Renderer {
@@ -61,8 +61,19 @@ impl Renderer {
 #[async_trait(?Send)]
 pub trait Game {
     async fn initialize(&self) -> Result<Box<dyn Game>>;
-    fn update(&mut self);
+    fn update(&mut self, input: &bool);
     fn draw(&self, renderer: &Renderer);
+}
+
+pub struct Position {
+    pub x: f64,
+    pub y: f64,
+}
+
+pub struct GameState;
+pub struct InGame{
+    pub velocity: f64,
+    pub position: Position,
 }
 
 pub struct GameLoop{
@@ -81,6 +92,30 @@ impl GameLoop {
             context: browser::context()?,
         };
 
+        let input= Rc::new(Cell::new(false));
+        {
+            let pressed = input.clone();
+            let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(true) );
+            browser::canvas()?.add_event_listener_with_callback("mousedown", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
+            listener.forget();
+        }
+        {
+            let pressed = input.clone();
+            let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(false) );
+            browser::canvas()?.add_event_listener_with_callback("mouseup", listener.as_ref().unchecked_ref()).expect("Could not add mouseup listener to canvas");
+            listener.forget();
+
+        }
+        {
+            let pressed = input.clone();
+            let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(false) );
+            browser::canvas()?.add_event_listener_with_callback("mouseleave", listener.as_ref().unchecked_ref()).expect("Could not add mouseleave listener to canvas");
+            listener.forget();
+
+        }
+
+
+
         let f: Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>> = Rc::new(RefCell::new(None));
         let g = f.clone();
 
@@ -88,7 +123,7 @@ impl GameLoop {
             game_loop.accumulated_delta += delta - game_loop.last_frame;
 
             while game_loop.accumulated_delta > FRAME_RATE_IN_MILLISECONDS {
-                game.update();
+                game.update(&input.get());
                 game_loop.accumulated_delta -= FRAME_RATE_IN_MILLISECONDS;
             }
 
