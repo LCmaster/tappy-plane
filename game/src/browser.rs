@@ -15,22 +15,28 @@ pub fn window() -> Result<Window> {
 }
 
 pub fn document() -> Result<Document> {
-    window()?.document().ok_or_else(|| anyhow!("No document found"))
+    let window = window()?;
+    window.document().ok_or_else(|| anyhow!("No document found"))
 }
 
 pub fn canvas() -> Result<HtmlCanvasElement> {
-    document()?
-        .get_element_by_id("canvas")
-        .ok_or_else(|| anyhow!("No Canvas Element found with ID 'canvas"))?
+    let document = document()?;
+    let opt_element = document.get_element_by_id("canvas");
+    let element = opt_element.ok_or_else(|| anyhow!("No canvas with id 'canvas' found"))?;
+    element
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|element| anyhow!("Error converting {:#?} to HtmlCanvasElement", element))
 }
 
 pub fn context() -> Result<CanvasRenderingContext2d> {
-    canvas()?
+    let canvas = canvas()?;
+    let res_context = canvas
         .get_context("2d")
-        .map_err(|err| anyhow!("Error getting 2d context {:#?}", err))?
-        .ok_or_else(|| anyhow!("No 2d context found"))?
+        .map_err(|err| anyhow!("Error getting 2d context {:#?}", err))?;
+    let context = res_context
+        .ok_or_else(|| anyhow!("No 2d context found"))?;
+
+    context
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .map_err(|element| anyhow!("Error converting {:#?} to CanvasRenderingContext2d", element))
 }
@@ -45,7 +51,7 @@ pub fn spawn_local<F>(future: F)
 pub async fn fetch_with_str(resource: &str) -> Result<JsValue> {
     JsFuture::from(window()?.fetch_with_str(resource))
         .await
-        .map_err(|err| anyhow!("error fetching {:#?}", err))
+        .map_err(|err| anyhow!("Error fetching {:#?}", err))
 }
 
 pub async fn fetch_json(json_path: &str) -> Result<JsValue> {

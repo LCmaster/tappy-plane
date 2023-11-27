@@ -61,7 +61,7 @@ impl Renderer {
 #[async_trait(?Send)]
 pub trait Game {
     async fn initialize(&self) -> Result<Box<dyn Game>>;
-    fn update(&mut self, input: &bool);
+    fn update(&mut self, delta: &f64, input: &bool);
     fn draw(&self, renderer: &Renderer);
 }
 
@@ -71,10 +71,6 @@ pub struct Position {
 }
 
 pub struct GameState;
-pub struct InGame{
-    pub velocity: f64,
-    pub position: Position,
-}
 
 pub struct GameLoop{
     last_frame: f64,
@@ -119,16 +115,17 @@ impl GameLoop {
         let f: Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>> = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let animate = Some(browser::create_animation_closure(move |delta: f64| {
-            game_loop.accumulated_delta += delta - game_loop.last_frame;
+        let mut delta: f64 = 0.0;
+        let mut previous_time: f64 = browser::now()?; 
 
-            while game_loop.accumulated_delta > FRAME_RATE_IN_MILLISECONDS {
-                game.update(&input.get());
-                game_loop.accumulated_delta -= FRAME_RATE_IN_MILLISECONDS;
-            }
+        let animate = Some(browser::create_animation_closure(move |js_delta: f64| {
+            let current_time: f64 = browser::now().unwrap();
+            delta = (current_time - previous_time) / 1000.0;
 
-            game_loop.last_frame = delta;
+            game.update(&delta, &input.get());
             game.draw(&renderer);
+
+            previous_time = current_time;
 
             browser::request_animation_frame(f.borrow().as_ref().unwrap());
         }));

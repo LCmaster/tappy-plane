@@ -3,6 +3,9 @@ const config = {
   content: ["./src/**/*.{html,js,svelte,ts}"],
 
   theme: {
+    fontFamily: {
+      'sigmar': ["Sigmar", "sans-serif"],
+    },
     extend: {},
   },
 
