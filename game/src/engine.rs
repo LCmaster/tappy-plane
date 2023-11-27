@@ -4,14 +4,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, HtmlImageElement, MouseEvent};
+use web_sys::{CanvasRenderingContext2d, HtmlImageElement, MouseEvent, TouchEvent};
 use futures;
 
 use crate::browser;
-
-pub const FRAMES_PER_SECOND: f64 = 60.0;
-pub const FRAME_RATE: f64 = 1.0 / FRAMES_PER_SECOND;
-pub const FRAME_RATE_IN_MILLISECONDS: f64 = FRAME_RATE * 1000.0;
 
 #[derive(Debug, Deserialize)]
 pub struct Rect {
@@ -91,21 +87,35 @@ impl GameLoop {
         let input= Rc::new(Cell::new(false));
         {
             let pressed = input.clone();
-            let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(true) );
+            
+             let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(true) );
             browser::canvas()?.add_event_listener_with_callback("mousedown", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
             listener.forget();
-        }
-        {
+
+            let pressed = input.clone();
+            let listener = Closure::<dyn FnMut(_)>::new(move |event: TouchEvent| pressed.set(true) );
+            browser::canvas()?.add_event_listener_with_callback("touchstart", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
+            listener.forget();
+
             let pressed = input.clone();
             let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(false) );
             browser::canvas()?.add_event_listener_with_callback("mouseup", listener.as_ref().unchecked_ref()).expect("Could not add mouseup listener to canvas");
             listener.forget();
+            
+            let pressed = input.clone();
+            let listener = Closure::<dyn FnMut(_)>::new(move |event: TouchEvent| pressed.set(false) );
+            browser::canvas()?.add_event_listener_with_callback("touchend", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
+            listener.forget();
 
-        }
-        {
+
             let pressed = input.clone();
             let listener = Closure::<dyn FnMut(_)>::new(move |event: MouseEvent| pressed.set(false) );
             browser::canvas()?.add_event_listener_with_callback("mouseleave", listener.as_ref().unchecked_ref()).expect("Could not add mouseleave listener to canvas");
+            listener.forget();
+
+            let pressed = input.clone();
+            let listener = Closure::<dyn FnMut(_)>::new(move |event: TouchEvent| pressed.set(false) );
+            browser::canvas()?.add_event_listener_with_callback("touchcancel", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
             listener.forget();
 
         }
