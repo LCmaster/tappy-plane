@@ -19,8 +19,9 @@ wasm-bindgen = "0.2.88"
 serde-wasm-bindgen = "0.6.1"
 wasm-bindgen-futures = "0.4.38"
 console_error_panic_hook = "0.1.7"
+getrandom = { version = "0.2", features = ["js"] }
 serde = { version="1.0.192", features = ["derive"] }
-rapier2d = { version = "0.17.2", features = ["wasm-bindgen"] }
+rapier2d = { version = "*", features = ["wasm-bindgen"] }
 
 
 [dependencies.web-sys]

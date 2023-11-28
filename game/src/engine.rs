@@ -94,7 +94,7 @@ impl GameLoop {
 
             let pressed = input.clone();
             let listener = Closure::<dyn FnMut(_)>::new(move |event: TouchEvent| pressed.set(true) );
-            browser::canvas()?.add_event_listener_with_callback("touchstart", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
+            browser::canvas()?.add_event_listener_with_callback("touchstart", listener.as_ref().unchecked_ref()).expect("Could not add touchstart listener to canvas");
             listener.forget();
 
             let pressed = input.clone();
@@ -104,7 +104,7 @@ impl GameLoop {
             
             let pressed = input.clone();
             let listener = Closure::<dyn FnMut(_)>::new(move |event: TouchEvent| pressed.set(false) );
-            browser::canvas()?.add_event_listener_with_callback("touchend", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
+            browser::canvas()?.add_event_listener_with_callback("touchend", listener.as_ref().unchecked_ref()).expect("Could not add touchend listener to canvas");
             listener.forget();
 
 
@@ -115,22 +115,18 @@ impl GameLoop {
 
             let pressed = input.clone();
             let listener = Closure::<dyn FnMut(_)>::new(move |event: TouchEvent| pressed.set(false) );
-            browser::canvas()?.add_event_listener_with_callback("touchcancel", listener.as_ref().unchecked_ref()).expect("Could not add mousedown listener to canvas");
+            browser::canvas()?.add_event_listener_with_callback("touchcancel", listener.as_ref().unchecked_ref()).expect("Could not add touchcancel listener to canvas");
             listener.forget();
-
         }
-
-
 
         let f: Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>> = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let mut delta: f64 = 0.0;
         let mut previous_time: f64 = browser::now()?; 
 
         let animate = Some(browser::create_animation_closure(move |js_delta: f64| {
             let current_time: f64 = browser::now().unwrap();
-            delta = (current_time - previous_time) / 1000.0;
+            let delta = (current_time - previous_time) / 1000.0;
 
             game.update(&delta, &input.get());
             game.draw(&renderer);

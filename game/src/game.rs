@@ -1,8 +1,13 @@
 use crate::{engine::{Game, Renderer, Spritesheet, Rect, self, Position}, browser};
+
+use getrandom;
 use anyhow::Result;
 use async_trait::async_trait;
 use wasm_bindgen::JsValue;
 use web_sys::{HtmlImageElement, console};
+
+const CANVAS_WIDTH: f64 = 800.0;
+const CANVAS_HEIGHT: f64 = 480.0;
 
 pub trait GameState {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>;
@@ -12,19 +17,21 @@ pub trait GameState {
 pub struct Waiting;
 
 pub struct GetReady {
+    scroll_speed: f64,
     time_elapsed: f64,
 }
 
 pub struct Playing {
-    frame: u16,
-    obstacles: Vec<Position>
+    scroll_speed: f64,
+    obstacles: Vec<Position>,
+    distance_between_obstacles: f64,
 }
 pub struct GameOver;
 
 impl GameState for Waiting {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
         if *input {
-            Some(Box::new(GetReady{ time_elapsed: 0.0}))
+            Some(Box::new(GetReady{ scroll_speed: 3.0, time_elapsed: 0.0}))
         } else {
             None
         }
@@ -35,8 +42,8 @@ impl GameState for Waiting {
 
         let plane_sprite = sheet.tileset.get("planeRed1.png").unwrap();
 
-        let h_pos = 800.0/2.0 - (plane_sprite.width as f64)/2.0;
-        let v_pos = 480.0/2.0 - (plane_sprite.height as f64)/2.0;
+        let h_pos = CANVAS_WIDTH/2.0 - (plane_sprite.width as f64)/2.0;
+        let v_pos = CANVAS_HEIGHT/2.0 - (plane_sprite.height as f64)/2.0;
 
         draw_background(sheet, image, renderer);
         draw_limits(0, sheet, image, renderer);
@@ -79,8 +86,16 @@ impl GameState for GetReady {
         self.time_elapsed += delta;
 
         if self.time_elapsed as u16 >= 4 {
-            // Some(Box::new(Playing{frame: 0, obstacles: Vec::new()}))
-            Some(Box::new(GameOver))
+            Some(
+                Box::new(
+                    Playing{
+                        scroll_speed: self.scroll_speed, 
+                        obstacles: Vec::new(), 
+                        distance_between_obstacles: 600.0
+                    }
+                )
+            )
+            // Some(Box::new(GameOver))
         } else {
             None
         }
@@ -103,11 +118,11 @@ impl GameState for GetReady {
 
         let plane_sprite = sheet.tileset.get("planeRed1.png").unwrap();
 
-        let start_pos = 800.0/2.0 - (plane_sprite.width as f64)/2.0;
+        let start_pos = CANVAS_WIDTH/2.0 - (plane_sprite.width as f64)/2.0;
         let end_pos = plane_sprite.width as f64;
 
         let h_pos = start_pos - ((start_pos - end_pos) * self.time_elapsed) / 4.0;
-        let v_pos = 480.0/2.0 - (plane_sprite.height as f64)/2.0;
+        let v_pos = CANVAS_HEIGHT/2.0 - (plane_sprite.height as f64)/2.0;
 
         draw_background(sheet, image, renderer);
         draw_limits(0, sheet, image, renderer);
@@ -118,8 +133,8 @@ impl GameState for GetReady {
             image, 
             sprite, 
             &Rect { 
-                x: 800/2 - sprite.width/2, 
-                y: 480/2 - sprite.height/2, 
+                x: CANVAS_WIDTH as i32/2 - sprite.width/2, 
+                y: CANVAS_HEIGHT as i32/2 - sprite.height/2, 
                 width: sprite.width, 
                 height: sprite.height 
             }
@@ -129,6 +144,21 @@ impl GameState for GetReady {
 
 impl GameState for Playing {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
+        for pos in self.obstacles.iter_mut() {
+            pos.x -= delta * 10.0 * self.scroll_speed;  
+        }
+
+        self.obstacles.retain_mut(|pos| pos.x > -200.0);
+        
+        if self.obstacles.len() == 0 {
+            self.obstacles.push(create_obstacle(CANVAS_WIDTH, 0.0));
+        } else {
+            let last_obstacle = self.obstacles.last().unwrap();
+            if last_obstacle.x <= CANVAS_WIDTH - self.distance_between_obstacles {
+                self.obstacles.push(create_obstacle(last_obstacle.x + self.distance_between_obstacles, 200.0));
+            }
+        }
+
         None
     }
     
@@ -138,18 +168,24 @@ impl GameState for Playing {
         let plane_sprite = sheet.tileset.get("planeRed1.png").unwrap();
 
         let h_pos = plane_sprite.width as f64;
-        let v_pos = 480.0/2.0 - (plane_sprite.height as f64)/2.0;
+        let v_pos = CANVAS_HEIGHT/2.0 - (plane_sprite.height as f64)/2.0;
 
         draw_background(sheet, image, renderer);
-        draw_limits(0, sheet, image, renderer);
         draw_plane("Red", &1_u16, &Position{x: h_pos, y: v_pos}, sheet, image, renderer);
+        draw_obstacles(
+            &self.obstacles, 
+            sheet, 
+            image, 
+            renderer
+        );
+        draw_limits(0, sheet, image, renderer);
     }
 }
 
 impl GameState for GameOver {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
         if *input {
-            Some(Box::new(GetReady{ time_elapsed: 0.0}))
+            Some(Box::new(GetReady{scroll_speed: 1.0, time_elapsed: 0.0}))
         } else {
             None
         }
@@ -162,8 +198,8 @@ impl GameState for GameOver {
             image, 
             sprite, 
             &Rect { 
-                x: 800/2 - sprite.width/2, 
-                y: 480/2 - sprite.height/2, 
+                x: CANVAS_WIDTH as i32/2 - sprite.width/2, 
+                y: CANVAS_HEIGHT as i32/2 - sprite.height/2, 
                 width: sprite.width, 
                 height: sprite.height 
             }
@@ -218,15 +254,24 @@ fn clear_canvas(renderer: &Renderer) {
     let clear_area = Rect{
         x: 0,
         y: 0,
-        width: 800,
-        height: 480
+        width: CANVAS_WIDTH as i32,
+        height: CANVAS_HEIGHT as i32
     };
     renderer.clear(&clear_area);
 }
 
 fn draw_background(sheet: &Spritesheet, image: &HtmlImageElement, renderer: &Renderer) {
     let background: &Rect = sheet.tileset.get("background.png").as_ref().unwrap();
-    renderer.draw_image(&image, background, &Rect { x: 0, y: 0, width: 800, height: 480 });
+    renderer.draw_image(
+        &image, 
+        background, 
+        &Rect { 
+            x: 0, 
+            y: 0, 
+            width: CANVAS_WIDTH as i32, 
+            height: CANVAS_HEIGHT as i32 
+        }
+    );
 }
 
 fn draw_limits(offset: i32, sheet: &Spritesheet, image: &HtmlImageElement, renderer: &Renderer) {
@@ -238,7 +283,7 @@ fn draw_limits(offset: i32, sheet: &Spritesheet, image: &HtmlImageElement, rende
         floor,
         &Rect{
             x: 0 - offset, 
-            y: 480-floor.height,
+            y: CANVAS_HEIGHT as i32 - floor.height,
             width: floor.width,
             height: floor.height
         }
@@ -249,7 +294,7 @@ fn draw_limits(offset: i32, sheet: &Spritesheet, image: &HtmlImageElement, rende
         floor, 
         &Rect{
             x: 0 - offset + floor.width, 
-            y: 480-floor.height,
+            y: CANVAS_HEIGHT as i32 -floor.height,
             width: floor.width,
             height: floor.height
         }
@@ -299,5 +344,35 @@ fn draw_plane(color: &str, sprite_number: &u16, position: &Position, sheet: &Spr
         );
 }
 
-fn draw_obstacle() {}
+fn create_obstacle(min_x: f64, max_offset: f64)-> Position {
+    Position{
+        x: min_x + (js_sys::Math::random() * max_offset).floor(), 
+        y: if js_sys::Math::random() > 0.5 { CANVAS_HEIGHT } else { 0.0 },
+    }
+}
+
+fn draw_obstacles(obstacles: &Vec<Position>, sheet: &Spritesheet, image: &HtmlImageElement, renderer: &Renderer) {
+    for pos in obstacles.iter() {
+        let sprite = sheet
+            .tileset
+            .get(
+                if pos.y > 0.0 {
+                    "rock.png"
+                } else {
+                    "rockDown.png"
+                }
+            ).unwrap();
+        
+        renderer.draw_image(
+            image, 
+            sprite, 
+            &Rect{ 
+                x: pos.x.floor() as i32, 
+                y: (if pos.y > 0.0 { pos.y } else { pos.y + sprite.height as f64 } - sprite.height as f64).floor() as i32, 
+                width: sprite.width, 
+                height: sprite.height 
+            }
+        );
+    }
+}
 
