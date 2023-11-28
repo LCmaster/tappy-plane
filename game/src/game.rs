@@ -148,7 +148,8 @@ impl GameState for GetReady {
 
 impl GameState for Playing {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
-        self.plane_frame += delta * 24.0;
+        let plane_rotation_speed = 60.0 / 3.0;
+        self.plane_frame += delta * plane_rotation_speed;
         self.plane_frame = self.plane_frame % 3.0;
 
         self.terrain_offset -= delta * 100.0 * self.scroll_speed ;
