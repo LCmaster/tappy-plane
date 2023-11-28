@@ -1,5 +1,5 @@
 use anyhow::Result;
-use engine::GameLoop;
+use engine::Engine;
 use game::{TappyPlane, Waiting};
 use wasm_bindgen::prelude::*;
 
@@ -19,7 +19,7 @@ pub fn main_js() -> Result<(), JsValue> {
             sheet: None,
             state: Box::new(Waiting{}),
         };
-        GameLoop::start(game).await.expect("Could not start game loop");
+        Engine::start(game).await.expect("Could not start game loop");
     });
 
     Ok(())

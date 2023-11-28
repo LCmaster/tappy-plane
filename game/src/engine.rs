@@ -56,7 +56,7 @@ impl Renderer {
 
 #[async_trait(?Send)]
 pub trait Game {
-    async fn initialize(&self) -> Result<Box<dyn Game>>;
+    async fn init(&self) -> Result<Box<dyn Game>>;
     fn update(&mut self, delta: &f64, input: &bool);
     fn draw(&self, renderer: &Renderer);
 }
@@ -66,19 +66,11 @@ pub struct Position {
     pub y: f64,
 }
 
-pub struct GameState;
+pub struct Engine;
 
-pub struct GameLoop{
-    last_frame: f64,
-    accumulated_delta: f64,
-}
-impl GameLoop {
-    pub async fn start(game: impl Game + 'static) -> Result<()> {
-        let mut game = game.initialize().await?;
-        let mut game_loop = GameLoop {
-            last_frame: browser::now()?,
-            accumulated_delta: 0.0,
-        };
+impl Engine {
+    pub async fn start<T: Game + 'static>(game: T) -> Result<()> {
+        let mut game = game.init().await?;
 
         let renderer = Renderer {
             context: browser::context()?,

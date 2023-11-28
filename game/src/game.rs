@@ -22,7 +22,9 @@ pub struct GetReady {
 }
 
 pub struct Playing {
+    plane_frame: f64,
     scroll_speed: f64,
+    terrain_offset: f64,
     obstacles: Vec<Position>,
     distance_between_obstacles: f64,
 }
@@ -31,7 +33,7 @@ pub struct GameOver;
 impl GameState for Waiting {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
         if *input {
-            Some(Box::new(GetReady{ scroll_speed: 3.0, time_elapsed: 0.0}))
+            Some(Box::new(GetReady{ scroll_speed: 1.0, time_elapsed: 0.0}))
         } else {
             None
         }
@@ -89,9 +91,11 @@ impl GameState for GetReady {
             Some(
                 Box::new(
                     Playing{
+                        plane_frame: 1.0,
                         scroll_speed: self.scroll_speed, 
+                        terrain_offset: 0.0,
                         obstacles: Vec::new(), 
-                        distance_between_obstacles: 600.0
+                        distance_between_obstacles: 400.0
                     }
                 )
             )
@@ -144,8 +148,14 @@ impl GameState for GetReady {
 
 impl GameState for Playing {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
+        self.plane_frame += delta * 24.0;
+        self.plane_frame = self.plane_frame % 3.0;
+
+        self.terrain_offset -= delta * 100.0 * self.scroll_speed ;
+        self.terrain_offset = self.terrain_offset % 808.0;
+
         for pos in self.obstacles.iter_mut() {
-            pos.x -= delta * 10.0 * self.scroll_speed;  
+            pos.x -= delta * 100.0 * self.scroll_speed;  
         }
 
         self.obstacles.retain_mut(|pos| pos.x > -200.0);
@@ -171,14 +181,14 @@ impl GameState for Playing {
         let v_pos = CANVAS_HEIGHT/2.0 - (plane_sprite.height as f64)/2.0;
 
         draw_background(sheet, image, renderer);
-        draw_plane("Red", &1_u16, &Position{x: h_pos, y: v_pos}, sheet, image, renderer);
+        draw_plane("Red", &(self.plane_frame as u16 + 1), &Position{x: h_pos, y: v_pos}, sheet, image, renderer);
         draw_obstacles(
             &self.obstacles, 
             sheet, 
             image, 
             renderer
         );
-        draw_limits(0, sheet, image, renderer);
+        draw_limits(self.terrain_offset as i32, sheet, image, renderer);
     }
 }
 
@@ -215,7 +225,7 @@ pub struct TappyPlane{
 
 #[async_trait(?Send)]
 impl Game for TappyPlane {
-    async fn initialize(&self) -> Result<Box<dyn Game>> {
+    async fn init(&self) -> Result<Box<dyn Game>> {
         let sheet: Spritesheet = serde_wasm_bindgen::from_value(
             browser::fetch_json("/assets/sheet.json")
             .await?
@@ -275,53 +285,53 @@ fn draw_background(sheet: &Spritesheet, image: &HtmlImageElement, renderer: &Ren
 }
 
 fn draw_limits(offset: i32, sheet: &Spritesheet, image: &HtmlImageElement, renderer: &Renderer) {
-    let floor: &Rect = sheet.tileset.get("groundGrass.png").as_ref().unwrap();
-    let ceilling: &Rect = sheet.tileset.get("groundDirt.png").as_ref().unwrap();
+    let terrain_above: &Rect = sheet.tileset.get("groundDirt.png").as_ref().unwrap();
+    let terrain_below: &Rect = sheet.tileset.get("groundGrass.png").as_ref().unwrap();
     
     renderer.draw_image(
         &image, 
-        floor,
+        terrain_below,
         &Rect{
-            x: 0 - offset, 
-            y: CANVAS_HEIGHT as i32 - floor.height,
-            width: floor.width,
-            height: floor.height
+            x: offset, 
+            y: CANVAS_HEIGHT as i32 - terrain_below.height,
+            width: terrain_below.width,
+            height: terrain_below.height
         }
     );
 
     renderer.draw_image(
         &image, 
-        floor, 
+        terrain_below, 
         &Rect{
-            x: 0 - offset + floor.width, 
-            y: CANVAS_HEIGHT as i32 -floor.height,
-            width: floor.width,
-            height: floor.height
+            x: offset + terrain_below.width, 
+            y: CANVAS_HEIGHT as i32 -terrain_below.height,
+            width: terrain_below.width,
+            height: terrain_below.height
         }
     );
 
     renderer.context.save();
-    renderer.context.translate(ceilling.width as f64, ceilling.height as f64);
+    renderer.context.translate(terrain_above.width as f64, terrain_above.height as f64);
     renderer.context.rotate(std::f64::consts::PI);
 
     renderer.draw_image(
         &image,
-        ceilling, 
+        terrain_above, 
         &Rect{
-            x: 0 + offset, 
+            x: -offset, 
             y: 0,
-            width: ceilling.width,
-            height: ceilling.height,
+            width:terrain_above.width,
+            height: terrain_above.height,
         }
     );
     renderer.draw_image(
         &image,
-        ceilling, 
+        terrain_above, 
         &Rect{
-            x: 0 + offset - ceilling.width as i32, 
+            x: -offset - terrain_above.width as i32, 
             y: 0,
-            width: ceilling.width,
-            height: ceilling.height,
+            width: terrain_above.width,
+            height: terrain_above.height,
         }
     );
 
