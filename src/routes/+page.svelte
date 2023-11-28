@@ -15,7 +15,7 @@
             Tappy Plane
         </h1>
         <p class="mt-4">
-            <strong>Objective:</strong> Maintain the plane flying by clicking/tapping on it, but be aware of the obstacles!
+            <strong>Objective:</strong> Maintain the plane flying by clicking/tapping on it, but be aware of obstacles!
         </p>
         <canvas id="canvas" class="max-w-[800px]" width="800" height="480"></canvas>
     </div>
