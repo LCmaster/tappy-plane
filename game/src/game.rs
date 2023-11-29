@@ -184,7 +184,7 @@ impl GameState for Playing {
 
         if *input {
             log!("Applying Impulse!");
-            self.world.add_impulse(self.plane_collider.as_ref().unwrap(), -100.0);
+            self.world.add_impulse(self.plane_collider.as_ref().unwrap(), -50_000.0);
         }
 
         let plane_rotation_speed = 60.0 / 3.0;

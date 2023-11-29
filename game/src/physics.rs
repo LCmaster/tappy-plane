@@ -23,7 +23,7 @@ pub struct World {
 impl Default for World {
     fn default() -> Self {
         World { 
-            gravity: Vector2::new(0.0, 9.81), 
+            gravity: Vector2::new(0.0, 98.1), 
             rigid_body_set: RigidBodySet::new(),
             collider_set: ColliderSet::new(),
             integration_parameters: IntegrationParameters::default(),
@@ -80,7 +80,10 @@ impl World {
                     (rect.x + rect.width/2) as f32, 
                     (rect.y + rect.height/2) as f32
                 ]
-            ).build();
+            )
+            .locked_axes(LockedAxes::TRANSLATION_LOCKED_X)
+            .lock_rotations()
+            .build();
 
         let collider = ColliderBuilder::cuboid(
             (rect.width as f32)/2.0, (rect.height as f32)/2.0
