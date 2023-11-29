@@ -1,10 +1,9 @@
-use crate::{engine::{Game, Renderer, Spritesheet, Rect, self, Position}, browser};
+use crate::{engine::{Game, Renderer, Spritesheet, Rect, self, Position}, browser, physics::World};
 
-use getrandom;
 use anyhow::Result;
 use async_trait::async_trait;
-use wasm_bindgen::JsValue;
-use web_sys::{HtmlImageElement, console};
+use rapier2d::{geometry::ColliderHandle, dynamics::RigidBodyHandle};
+use web_sys::HtmlImageElement;
 
 const CANVAS_WIDTH: f64 = 800.0;
 const CANVAS_HEIGHT: f64 = 480.0;
@@ -27,8 +26,13 @@ pub struct Playing {
     terrain_offset: f64,
     obstacles: Vec<Position>,
     distance_between_obstacles: f64,
+
+    world: World,
+    plane_collider: Option<RigidBodyHandle>
 }
-pub struct GameOver;
+pub struct GameOver{
+    frames: u8,
+}
 
 impl GameState for Waiting {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
@@ -95,7 +99,9 @@ impl GameState for GetReady {
                         scroll_speed: self.scroll_speed, 
                         terrain_offset: 0.0,
                         obstacles: Vec::new(), 
-                        distance_between_obstacles: 400.0
+                        distance_between_obstacles: 400.0,
+                        world: World::default(),
+                        plane_collider: None,
                     }
                 )
             )
@@ -148,6 +154,39 @@ impl GameState for GetReady {
 
 impl GameState for Playing {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
+        self.world.update();
+
+        if self.plane_collider.is_none() {
+            self.world.add_collider(&Rect { 
+                x: 0, 
+                y: 480 - 71, 
+                width: 808,
+                height: 71 
+            });
+            self.world.add_collider(&Rect{
+                x: 0,
+                y: 0,
+                width: 808,
+                height: 71,
+            });
+
+            let handle = self.world.add_rigid_body(
+                &Rect{ 
+                    x: 88, 
+                    y: (CANVAS_HEIGHT/2.0 - 73.0/2.0) as i32, 
+                    width: 88, 
+                    height: 73
+                }
+            );
+
+            self.plane_collider = Some(handle);
+        }
+
+        if *input {
+            log!("Applying Impulse!");
+            self.world.add_impulse(self.plane_collider.as_ref().unwrap(), -100.0);
+        }
+
         let plane_rotation_speed = 60.0 / 3.0;
         self.plane_frame += delta * plane_rotation_speed;
         self.plane_frame = self.plane_frame % 3.0;
@@ -182,7 +221,18 @@ impl GameState for Playing {
         let v_pos = CANVAS_HEIGHT/2.0 - (plane_sprite.height as f64)/2.0;
 
         draw_background(sheet, image, renderer);
-        draw_plane("Red", &(self.plane_frame as u16 + 1), &Position{x: h_pos, y: v_pos}, sheet, image, renderer);
+
+        if let Some(handle) = self.plane_collider.as_ref() {
+            let pos = self.world.get_body_position(handle);
+            draw_plane(
+                "Red", 
+                &(self.plane_frame as u16 + 1), 
+                &Position{x: pos.x, y: pos.y}, 
+                sheet, 
+                image, 
+                renderer
+            );
+        }
         draw_obstacles(
             &self.obstacles, 
             sheet, 
@@ -195,26 +245,37 @@ impl GameState for Playing {
 
 impl GameState for GameOver {
     fn update(&mut self, delta: &f64, input: &bool) -> Option<Box<dyn GameState>>{
+        self.frames += if self.frames > 1 { 0 } else { 1 };
+
         if *input {
-            Some(Box::new(GetReady{scroll_speed: 1.0, time_elapsed: 0.0}))
+            Some(
+                Box::new(
+                    GetReady{
+                        scroll_speed: 1.0, 
+                        time_elapsed: 0.0
+                    }
+                )
+            )
         } else {
             None
         }
     }
 
     fn draw(&self, renderer: &Renderer, image: &HtmlImageElement, sheet: &Spritesheet){
-        let sprite = sheet.tileset.get("textGameOver.png").unwrap();
+        if self.frames < 1 {
+            let sprite = sheet.tileset.get("textGameOver.png").unwrap();
 
-        renderer.draw_image(
-            image, 
-            sprite, 
-            &Rect { 
-                x: CANVAS_WIDTH as i32/2 - sprite.width/2, 
-                y: CANVAS_HEIGHT as i32/2 - sprite.height/2, 
-                width: sprite.width, 
-                height: sprite.height 
-            }
-        );
+            renderer.draw_image(
+                image, 
+                sprite, 
+                &Rect { 
+                    x: CANVAS_WIDTH as i32/2 - sprite.width/2, 
+                    y: CANVAS_HEIGHT as i32/2 - sprite.height/2, 
+                    width: sprite.width, 
+                    height: sprite.height 
+                }
+            );
+        }
     }
 }
 
@@ -222,6 +283,16 @@ pub struct TappyPlane{
     pub image: Option<HtmlImageElement>,
     pub sheet: Option<Spritesheet>,
     pub state: Box<dyn GameState>,
+}
+
+impl Default for TappyPlane {
+    fn default() -> Self {
+        TappyPlane { 
+            image: None, 
+            sheet: None, 
+            state: Box::new(Waiting),
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -246,6 +317,7 @@ impl Game for TappyPlane {
     }
 
     fn update(&mut self, delta: &f64, input: &bool){
+
         match self.state.update(delta, input) {
             Some(new_state) => self.state = new_state,
             None => ()
