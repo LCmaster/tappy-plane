@@ -3,6 +3,7 @@ use crate::{engine::{Game, Renderer, Spritesheet, Rect, self, Position}, browser
 use anyhow::Result;
 use async_trait::async_trait;
 use rapier2d::{geometry::ColliderHandle, dynamics::RigidBodyHandle};
+use serde::de::value;
 use web_sys::HtmlImageElement;
 
 const CANVAS_WIDTH: f64 = 800.0;
@@ -208,13 +209,43 @@ impl GameState for Playing {
             }
         }
 
+        let mut is_game_over = false;
+
         if let Some(handle) = self.plane_collider.as_ref() {
             let pos = self.world.get_body_position(handle);
-            if pos.y - 71.0/2.0 < 71.0 || pos.y + 71.0/2.0 > CANVAS_HEIGHT - 71.0 {
-                Some(Box::new(GameOver{frames: 0}))
-            } else {
-                None
+
+            is_game_over = pos.y - 73.0/2.0 < 71.0 || pos.y + 73.0/2.0 > CANVAS_HEIGHT - 71.0;
+
+            let value_in_range = |value, min, max| (value >= min) && (value <= max); 
+            for obstacle in self.obstacles.iter() {                
+                let x_overlap = 
+                value_in_range(
+                    pos.x - 88.0/2.0, 
+                    obstacle.x, 
+                    obstacle.x + 108.0
+                ) || value_in_range(
+                    pos.x + 88.0/2.0, 
+                    obstacle.x, 
+                    obstacle.x + 108.0
+                );
+
+                let y_overlap = 
+                value_in_range(
+                    pos.y - 73.0/2.0,
+                    obstacle.y,
+                    obstacle.y + 239.0
+                ) || value_in_range(
+                    pos.y + 73.0/2.0,
+                    obstacle.y - if obstacle.y > 0.0 { CANVAS_HEIGHT } else { 0.0 },
+                    obstacle.y - if obstacle.y > 0.0 { CANVAS_HEIGHT } else { 0.0 } + 239.0
+                );
+                
+                is_game_over = is_game_over || (x_overlap && y_overlap);
             }
+        }
+
+        if is_game_over {
+            Some(Box::new(GameOver{frames: 0}))
         } else {
             None
         }
@@ -458,7 +489,7 @@ fn draw_obstacles(obstacles: &Vec<Position>, sheet: &Spritesheet, image: &HtmlIm
             image, 
             sprite, 
             &Rect{ 
-                x: pos.x.floor() as i32, 
+                x: (pos.x).floor() as i32, 
                 y: (if pos.y > 0.0 { pos.y } else { pos.y + sprite.height as f64 } - sprite.height as f64).floor() as i32, 
                 width: sprite.width, 
                 height: sprite.height 
