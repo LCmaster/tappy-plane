@@ -18,6 +18,9 @@
             <strong>Objective:</strong> Maintain the plane flying by clicking/tapping on it, but be aware of obstacles!
         </p>
         <canvas id="canvas" class="max-w-[800px]" width="800" height="480"></canvas>
+        <p>
+            All assets used are part of <a class="underline" href="https://www.kenney.nl/">Kenney</a>'s <a class="underline" href="https://www.kenney.nl/assets/tappy-plane">Tappy Plane</a> asset package
+        </p>
     </div>
 </div>
 
