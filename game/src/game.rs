@@ -170,7 +170,7 @@ impl GameState for Playing {
                 height: 71,
             });
 
-            let handle = self.world.add_rigid_body(
+            let handle = self.world.add_plane(
                 &Rect{ 
                     x: 88, 
                     y: (CANVAS_HEIGHT/2.0 - 73.0/2.0) as i32, 
@@ -183,7 +183,6 @@ impl GameState for Playing {
         }
 
         if *input {
-            log!("Applying Impulse!");
             self.world.add_impulse(self.plane_collider.as_ref().unwrap(), -50_000.0);
         }
 
@@ -209,7 +208,16 @@ impl GameState for Playing {
             }
         }
 
-        None
+        if let Some(handle) = self.plane_collider.as_ref() {
+            let pos = self.world.get_body_position(handle);
+            if pos.y - 71.0/2.0 < 71.0 || pos.y + 71.0/2.0 > CANVAS_HEIGHT - 71.0 {
+                Some(Box::new(GameOver{frames: 0}))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
     
     fn draw(&self, renderer: &Renderer, image: &HtmlImageElement, sheet: &Spritesheet){
@@ -227,7 +235,7 @@ impl GameState for Playing {
             draw_plane(
                 "Red", 
                 &(self.plane_frame as u16 + 1), 
-                &Position{x: pos.x, y: pos.y}, 
+                &Position{x: pos.x - plane_sprite.width as f64/2.0, y: pos.y - plane_sprite.height as f64/2.0}, 
                 sheet, 
                 image, 
                 renderer

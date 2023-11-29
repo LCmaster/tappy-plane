@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use rapier2d::{prelude::*, na::Vector2};
+use rapier2d::{prelude::*, na::{Vector2, Point, Point2}};
 
 use crate::engine::{Rect, Position};
 
@@ -23,7 +23,7 @@ pub struct World {
 impl Default for World {
     fn default() -> Self {
         World { 
-            gravity: Vector2::new(0.0, 98.1), 
+            gravity: Vector2::new(0.0, 9.81 * 10.0 * 2.0), 
             rigid_body_set: RigidBodySet::new(),
             collider_set: ColliderSet::new(),
             integration_parameters: IntegrationParameters::default(),
@@ -73,7 +73,7 @@ impl World {
         self.collider_set.insert(collider)
     }
 
-    pub fn add_rigid_body(&mut self, rect: &Rect) -> RigidBodyHandle {
+    pub fn add_plane(&mut self, rect: &Rect) -> RigidBodyHandle {
         let rigid_body = RigidBodyBuilder::dynamic()
             .translation(
                 vector![
@@ -88,11 +88,35 @@ impl World {
         let collider = ColliderBuilder::cuboid(
             (rect.width as f32)/2.0, (rect.height as f32)/2.0
         )
+            // .active_events(ActiveEvents::COLLISION_EVENTS)
             .restitution(0.0)
             .build();
         let body_handle = self.rigid_body_set.insert(rigid_body);
         self.collider_set.insert_with_parent(collider, body_handle, &mut self.rigid_body_set);
         body_handle
+    }
+
+    pub fn add_obstacle(&mut self, rect: &Rect) -> RigidBodyHandle{
+        let rigid_body = RigidBodyBuilder::kinematic_position_based()
+            .translation(
+                vector![
+                    (rect.x + rect.width/2) as f32, 
+                    (rect.y + rect.height/2) as f32
+                ]
+            )
+            .locked_axes(LockedAxes::TRANSLATION_LOCKED_Y)
+            .lock_rotations()
+            .build();
+        let collider = ColliderBuilder::triangle(
+                Point2::new(0.0, 0.0), 
+                Point2::new((rect.width/2) as f32, rect.height as f32), 
+                Point2::new(rect.width as f32, 0.0)
+            )
+            .restitution(0.0)
+            .build();
+        let handle = self.rigid_body_set.insert(rigid_body);
+        self.collider_set.insert_with_parent(collider, handle, &mut self.rigid_body_set);
+        handle
     }
 
     pub fn get_body_position(&self, handle: &RigidBodyHandle) -> Position {
