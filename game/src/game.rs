@@ -236,8 +236,8 @@ impl GameState for Playing {
                     obstacle.y + 239.0
                 ) || value_in_range(
                     pos.y + 73.0/2.0,
-                    obstacle.y - if obstacle.y > 0.0 { CANVAS_HEIGHT } else { 0.0 },
-                    obstacle.y - if obstacle.y > 0.0 { CANVAS_HEIGHT } else { 0.0 } + 239.0
+                    obstacle.y,
+                    obstacle.y + 239.0
                 );
                 
                 is_game_over = is_game_over || (x_overlap && y_overlap);
@@ -467,9 +467,10 @@ fn draw_plane(color: &str, sprite_number: &u16, position: &Position, sheet: &Spr
 }
 
 fn create_obstacle(min_x: f64, max_offset: f64)-> Position {
+    let vertical_offset = js_sys::Math::random() * 239.0/2.0;
     Position{
         x: min_x + (js_sys::Math::random() * max_offset).floor(), 
-        y: if js_sys::Math::random() > 0.5 { CANVAS_HEIGHT } else { 0.0 },
+        y: if js_sys::Math::random() > 0.5 { CANVAS_HEIGHT + vertical_offset - 239.0 } else { 0.0 - vertical_offset } ,
     }
 }
 
@@ -489,8 +490,8 @@ fn draw_obstacles(obstacles: &Vec<Position>, sheet: &Spritesheet, image: &HtmlIm
             image, 
             sprite, 
             &Rect{ 
-                x: (pos.x).floor() as i32, 
-                y: (if pos.y > 0.0 { pos.y } else { pos.y + sprite.height as f64 } - sprite.height as f64).floor() as i32, 
+                x: pos.x.floor() as i32, 
+                y: pos.y.floor() as i32, 
                 width: sprite.width, 
                 height: sprite.height 
             }
